@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test de Crisis Hipertensiva - Completo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f1f5f9;
+        }
+        .option-card {
+            transition: all 0.2s ease;
+        }
+        .option-card:hover {
+            transform: translateX(8px);
+            background-color: #1e293b;
+        }
+        .correct {
+            background-color: #166534 !important;
+            border-color: #22c55e !important;
+        }
+        .incorrect {
+            background-color: #991b1b !important;
+            border-color: #ef4444 !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4 md:p-8">
+
+    <div id="app" class="w-full max-w-3xl bg-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+        <!-- Header con Contadores -->
+        <div class="bg-slate-900 p-6 flex justify-between items-center border-b border-slate-700">
+            <div>
+                <span class="text-sm text-slate-400 uppercase tracking-wider font-semibold">Progreso</span>
+                <div class="text-2xl font-bold" id="progress-text">1 / 26</div>
+            </div>
+            <div class="flex gap-4 text-center">
+                <div class="px-3 py-1 bg-green-900/30 border border-green-500 rounded-lg">
+                    <div class="text-xs text-green-400 font-bold">ACIERTOS</div>
+                    <div class="text-xl font-bold text-green-500" id="hits">0</div>
+                </div>
+                <div class="px-3 py-1 bg-red-900/30 border border-red-500 rounded-lg">
+                    <div class="text-xs text-red-400 font-bold">ERRORES</div>
+                    <div class="text-xl font-bold text-red-500" id="misses">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barra de progreso visual -->
+        <div class="w-full h-2 bg-slate-700">
+            <div id="progress-bar" class="h-full bg-blue-500 transition-all duration-500" style="width: 0%"></div>
+        </div>
+
+        <!-- Cuerpo del Cuestionario -->
+        <div class="p-6 md:p-8" id="quiz-body">
+            <h2 id="question-text" class="text-xl md:text-2xl font-semibold mb-8 border-l-4 border-blue-500 pl-4"></h2>
+            
+            <div id="options-container" class="space-y-3">
+                <!-- Las opciones se generarán aquí -->
+            </div>
+
+            <div class="mt-8 flex justify-end">
+                <button id="next-btn" onclick="nextQuestion()" class="hidden bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg active:scale-95">
+                    Siguiente Pregunta
+                </button>
+            </div>
+        </div>
+
+        <!-- Pantalla Final -->
+        <div id="result-screen" class="hidden p-10 text-center">
+            <h2 class="text-4xl font-bold mb-4">¡Cuestionario Finalizado!</h2>
+            <p id="final-stats" class="text-xl text-slate-300 mb-8"></p>
+            <button onclick="restartQuiz()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-10 py-4 rounded-2xl font-bold text-lg transition-all">
+                Reiniciar Cuestionario
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const quizData = [
+            {
+                q: "1. Antes de iniciar el tratamiento con fármacos hipotensores es necesario tener en cuenta las siguientes consideraciones. Indica la respuesta falsa:",
+                o: [
+                    "La presión arterial deberá descender por debajo de las cifras habituales del paciente.",
+                    "Antes de iniciar el tratamiento se descarta cualquier enfermedad asociada o no a la hipertensión que contraindique administrar un determinado fármaco.",
+                    "La reducción de la presión arterial de forma brusca puede provocar una isquemia en órganos diana.",
+                    "Los fármacos antihipertensivos se utilizarán, inicialmente, de manera aislada y a la dosis mínima recomendada."
+                ],
+                a: 1
+            },
+            {
+                q: "2. En la urgencia hipertensiva:",
+                o: [
+                    "Se puede definir como la elevación de la presión arterial que no se acompaña de compromiso vital inmediato.",
+                    "Hay un margen de actuación para disminuir las cifras tensionales de entre 24 y 36 horas.",
+                    "Se trata de cifras de presión arterial elevadas acompañadas de alteración orgánica grave con riesgo de lesión irreversible y riesgo vital inmediato.",
+                    "A y B son correctas."
+                ],
+                a: 3
+            },
+            {
+                q: "3. ¿Cuál está implicado en la iniciación y perpetuación de la lesión vascular asociada con la crisis hipertensiva?",
+                o: [
+                    "Sistema renina angiotensina.",
+                    "Vasopresina.",
+                    "Endotelina.",
+                    "Todas son correctas."
+                ],
+                a: 3
+            },
+            {
+                q: "4. En las crisis hipertensivas: señale la falsa.",
+                o: [
+                    "La reducción rápida de la presión arterial supone evitar todos los riesgos en los órganos diana.",
+                    "No siempre es necesario administrar líquidos.",
+                    "Mantener un control preciso del balance hídrico.",
+                    "Monitorizar siempre la hemodinámica (FC, FR, Sat O2, etc.)."
+                ],
+                a: 0
+            },
+            {
+                q: "5. Se define como la elevación severa de la PA (>220/120 mmHg) asociada a lesiones que pueden ser irreversibles de órganos diana (cerebro, riñón, vasos y retina).",
+                o: [
+                    "Pseudocrisis hipertensiva",
+                    "Emergencia hipertensiva",
+                    "Urgencia hipertensiva",
+                    "Hipertensión arterial leve"
+                ],
+                a: 1
+            },
+            {
+                q: "6. NO es característica de la Emergencia Hipertensiva:",
+                o: [
+                    "Se trata con fármacos por vía oral",
+                    "Pone en peligro la vida del paciente",
+                    "Lesión en órgano diana",
+                    "Requiere reducción inmediata de la presión arterial"
+                ],
+                a: 0
+            },
+            {
+                q: "7. NO es una causa de Emergencia Hipertensiva:",
+                o: [
+                    "Eclampsia",
+                    "Hemorragia intracraneal",
+                    "Hipertensión maligna acelerada",
+                    "Hipovolemia"
+                ],
+                a: 3
+            },
+            {
+                q: "8. No es el síntoma mas frecuente de HTA aguda:",
+                o: [
+                    "Ansiedad",
+                    "Fatiga",
+                    "Cefalea",
+                    "Inflamación óptica"
+                ],
+                a: 1
+            },
+            {
+                q: "9. Si la HTA es grave, los signos característicos son:",
+                o: [
+                    "Epistaxis",
+                    "Dolor toracico",
+                    "Disnea",
+                    "Todas las anteriores"
+                ],
+                a: 3
+            },
+            {
+                q: "10. ¿Cual no es un signo de emergencia hipertensiva?",
+                o: [
+                    "Disnea",
+                    "Dolor toracico",
+                    "Arritmias",
+                    "Disminución nivel de conciencia"
+                ],
+                a: 2
+            },
+            {
+                q: "11. ¿Cuál de las siguientes actuaciones enfermeras son las más indicadas en el cuidado de la crisis hipertensiva?",
+                o: [
+                    "Control y medición de diuresis",
+                    "Evaluación neurológica",
+                    "Mantener al paciente en decúbito supino estricto",
+                    "Solo A y B son correctas"
+                ],
+                a: 3
+            },
+            {
+                q: "12. Cúal de las siguientes afirmaciones NO es competencia del plan de actuación enfermera ante una crisis hipertensiva:",
+                o: [
+                    "Valoración de la situación",
+                    "Identificación de síntomas y posibles afectaciones",
+                    "Administración de medicamentos sin prescripción médica",
+                    "Adopción de medidas generales"
+                ],
+                a: 2
+            },
+            {
+                q: "13. Antes de tratar una crisis hipertensiva debemos tener en cuenta:",
+                o: [
+                    "Una reducción brusca puede provocar isquemia en órganos diana",
+                    "En ningún caso debemos reducirlas por debajo de sus cifras normales",
+                    "Los fármacos antihipertensivos se utilizan de forma aislada y a dosis mínimas",
+                    "Todas son correctas"
+                ],
+                a: 3
+            },
+            {
+                q: "14. En una urgencia hipertensiva:",
+                o: [
+                    "Hay lesión orgánica",
+                    "No hay lesión orgánica ni riesgo vital inmediato",
+                    "Hay riesgo vital inmediato",
+                    "Hay lesión orgánica y riesgo vital inmediato"
+                ],
+                a: 1
+            },
+            {
+                q: "15. El tratamiento correcto en una crisis hipertensiva de emergencia sería:",
+                o: [
+                    "Nifedipino sublingual",
+                    "En primer lugar Nifedipino, seguidamente Captopril",
+                    "En primer lugar perfusión de Nitroprusiato y si no descienden las cifras de tensión arterial se administraría Labetalol intravenoso",
+                    "Ninguna es correcta"
+                ],
+                a: 2
+            },
+            {
+                q: "16. En una crisis hipertensiva establecer un diagnóstico diferencial:",
+                o: [
+                    "Es muy facil",
+                    "Existe alguna dificultad",
+                    "No es necesario un diagnóstico diferencial",
+                    "Ninguna de las anteriores es correcta"
+                ],
+                a: 1
+            },
+            {
+                q: "17. Para la evaluación de un paciente con hipertensión es necesario:",
+                o: [
+                    "Anamnesis",
+                    "Examen físico",
+                    "Pruebas complementarias",
+                    "Todas son correctas"
+                ],
+                a: 3
+            },
+            {
+                q: "18. En una emergencia hipertensiva, el descenso de la TA debe ser:",
+                o: [
+                    "De 24-48h",
+                    "De inmediato",
+                    "Con fármacos IV",
+                    "B y C son correctas"
+                ],
+                a: 3
+            },
+            {
+                q: "19. En cuanto al tratamiento con Labetalol de la crisis HTA en un caso de urgencia debemos vigilar:",
+                o: [
+                    "Frecuencia cardiaca",
+                    "Frecuencia respiratoria",
+                    "Ambas",
+                    "No es necesario vigilar las constantes"
+                ],
+                a: 2
+            },
+            {
+                q: "20. Lo primero que se ve afectado en una crisis HTA es:",
+                o: [
+                    "Corazón",
+                    "Cerebro",
+                    "Hígado",
+                    "Riñón"
+                ],
+                a: 1
+            },
+            {
+                q: "21. Lo principal en cuanto a la actuación enfermera en una crisis en una HTA es:",
+                o: [
+                    "Nivel de conciencia",
+                    "Diuresis",
+                    "TA",
+                    "Todas son correctas"
+                ],
+                a: 3
+            },
+            {
+                q: "22. ¿Cuál de los siguientes órganos no se encuentra dentro de los órganos diana?",
+                o: [
+                    "Riñón.",
+                    "Corazón.",
+                    "Pulmón.",
+                    "Cerebro."
+                ],
+                a: 2
+            },
+            {
+                q: "23. Cuál de las siguientes características no define a una urgencia hipertensiva:",
+                o: [
+                    "El paciente llega con órganos internos dañados.",
+                    "La administración de fármacos en una urgencia HTA se administra por vía oral.",
+                    "Es una situación que no pone en riesgo la vida del paciente.",
+                    "Se trata a lo largo de varias horas o días."
+                ],
+                a: 0
+            },
+            {
+                q: "24. Frente a una emergencia hipertensiva, señale la respuesta falsa:",
+                o: [
+                    "Existe lesión del órgano diana en presencia de PA elevada.",
+                    "Pone en peligro la vida del paciente.",
+                    "Se trata en las horas posteriores con fármacos vía intravenosa.",
+                    "Las respuestas b y c son falsas."
+                ],
+                a: 2
+            },
+            {
+                q: "25. ¿Cuál no es un factor protector de la HTA?",
+                o: [
+                    "Dieta.",
+                    "Ingesta moderada de alcohol.",
+                    "Actividad física.",
+                    "Consumo de ácidos grasos monoinsaturados."
+                ],
+                a: 1
+            },
+            {
+                q: "26. La decisión de usar tratamiento oral o parenteral depende de, señala la opción correcta:",
+                o: [
+                    "De si el paciente se encuentra consciente o no.",
+                    "Si la PA es mayor de 180 mmHg siempre se usa tratamiento parenteral.",
+                    "Si existe daño en los órganos diana o no.",
+                    "A y c son correctas."
+                ],
+                a: 2
+            }
+        ];
+
+        let currentIndex = 0;
+        let hits = 0;
+        let misses = 0;
+        let answered = false;
+
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const nextBtn = document.getElementById('next-btn');
+        const progressText = document.getElementById('progress-text');
+        const progressBar = document.getElementById('progress-bar');
+        const hitEl = document.getElementById('hits');
+        const missEl = document.getElementById('misses');
+        const quizBody = document.getElementById('quiz-body');
+        const resultScreen = document.getElementById('result-screen');
+
+        function initQuiz() {
+            renderQuestion();
+            updateProgress();
+        }
+
+        function renderQuestion() {
+            const current = quizData[currentIndex];
+            questionText.textContent = current.q;
+            optionsContainer.innerHTML = '';
+            nextBtn.classList.add('hidden');
+            answered = false;
+
+            current.o.forEach((opt, index) => {
+                const button = document.createElement('button');
+                button.className = 'option-card w-full text-left p-4 rounded-xl border-2 border-slate-700 bg-slate-700/50 flex items-start gap-4';
+                button.innerHTML = `
+                    <span class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center font-bold text-sm text-white">${String.fromCharCode(65 + index)}</span>
+                    <span class="pt-1 text-slate-100">${opt}</span>
+                `;
+                button.onclick = () => handleSelection(index, button);
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function handleSelection(index, element) {
+            if (answered) return;
+            answered = true;
+            
+            const correctIndex = quizData[currentIndex].a;
+            const buttons = optionsContainer.getElementsByTagName('button');
+
+            if (index === correctIndex) {
+                hits++;
+                element.classList.add('correct');
+                hitEl.textContent = hits;
+            } else {
+                misses++;
+                element.classList.add('incorrect');
+                buttons[correctIndex].classList.add('correct');
+                missEl.textContent = misses;
+            }
+
+            for (let btn of buttons) {
+                btn.style.cursor = 'default';
+            }
+
+            nextBtn.classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            currentIndex++;
+            if (currentIndex < quizData.length) {
+                renderQuestion();
+                updateProgress();
+            } else {
+                showResults();
+            }
+        }
+
+        function updateProgress() {
+            const total = quizData.length;
+            const currentNum = currentIndex + 1;
+            progressText.textContent = `${currentNum} / ${total}`;
+            progressBar.style.width = `${(currentIndex / total) * 100}%`;
+        }
+
+        function showResults() {
+            quizBody.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+            progressBar.style.width = '100%';
+            
+            const score = Math.round((hits / quizData.length) * 100);
+            document.getElementById('final-stats').innerHTML = `
+                Has acertado <span class="text-green-500 font-bold">${hits}</span> de <span class="font-bold">${quizData.length}</span> preguntas.<br>
+                <span class="text-3xl mt-4 block">Nota Final: <span class="${score >= 50 ? 'text-blue-400' : 'text-red-400'}">${score}%</span></span>
+            `;
+        }
+
+        function restartQuiz() {
+            currentIndex = 0;
+            hits = 0;
+            misses = 0;
+            hitEl.textContent = '0';
+            missEl.textContent = '0';
+            resultScreen.classList.add('hidden');
+            quizBody.classList.remove('hidden');
+            initQuiz();
+        }
+
+        window.onload = initQuiz;
+    </script>
+</body>
+</html>
